@@ -1,0 +1,167 @@
+&echo &off
+/* -----------------------------------------------------------------------------------------------
+/* FLM_Majority_Method.aml -- developed by:
+/* Jason M. Herynk
+/*
+/*------------------------Purpose-----------------------------------------------------------------
+/*This AML Produces a Fuel Loading Model GRID:
+/******************************************************
+/* Grids needed:z##_evt, z##_esprf, z##_sclass, z##_3kgd, z##_evc
+/* Tables needed: EVCCall.dbf, Dommask.dbf, evt2.dbf, evtsc2.dbf, evtespsc.dbf, x.tab
+/******************************************************
+
+&ty    ----Renaming Grids with Zone ##---- 
+ 	&echo &off 
+    	&setvar work_path := [response 'Enter workspace path i.e. E:\workspace... Path']
+    	&if [null %work_path%] &then
+    		&return &warning No path entered!!!!!
+	
+    	w %work_path%
+
+    	/* ----- Get Grid Zone Number from user -----
+    	&setvar zone := [response 'Enter zone number i.e. z##']
+    	&if [null %zone%] &then
+    		&return &warning No Zone Number entered!!!!!
+
+	&ty ----- copying GRIDs evtr, 3kgd, esprf, evcr, and sclass
+ 		
+  	     	copy K:\fe\landfire\dat4\veg\%zone%\vegr\gis_fin\%zone%_evtr
+  	     	copy K:\fe\landfire\dat4\base\%zone%\gis\%zone%_3kgd 
+  	     	copy K:\fe\landfire\dat4\veg\%zone%\vegr\gis_fin\%zone%_esprf 
+  	     	copy K:\fe\landfire\dat4\veg\%zone%\vegr\gis_fin\%zone%_evcr
+ 	     	copy K:\fe\landfire\dat3\firereg\%zone%\gis\gis_fin\%zone%_sclass 
+ 	    	
+ 	       	GRID
+ 	    	  	&ty ----- Create combo grid by combining evt/esp/sclass to be exported as a dbf to the FLM_Python_Outfiles_Grid_Combine.mdb
+ 	     	  	combo = combine(%zone%_evtr, %zone%_esprf, %zone%_sclass)
+ 	     	  	End
+ 	     	  	q
+ 	     	  
+ 	     	  	&pause
+ 	     	  
+ 	      	  	&ty ----- Create a copy of the evtr grid and rename it as lfmask (lifeform mask)
+ 	      	  	copy %zone%_evtr lfmask
+ 	   	  	
+ 	   	  	&ty ----- Joining and defining majority FLM by Evt/esp/sclass
+ 	   	  	dbaseinfo evtespsc.dbf evtespsc.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 	   	  	
+ 	   	  	&ty ----- Joining and defining majority FLM by Evt/sclass
+ 	   	  	dbaseinfo evtsc2.dbf evtsc.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 	   	  
+ 	   	  	&ty ----- Joining and defining majority FLM by Evt
+ 	   	  	dbaseinfo evt2.dbf evt.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 	   	  
+ 		  	&ty ----- Defining Dominate Lifeform Mask (dommask)
+ 		  	dbaseinfo dommask.dbf dommask.tab define
+ 		  		Value Value 10 10 i
+ 		  		DomLfcode DomLfcode 10 10 i	
+ 		  	End
+ 		  
+ 		  	&ty ----- Defining Majority Existing Vegetation Cover EVC
+		  	dbaseinfo EVCCall.dbf EVC.tab define
+		  		Value Value 10 10 i			
+		  	End
+		  
+		  	&ty ----- Create dommask grid by combining lfmask and dommask.tab
+		  	joinitem lfmask.vat dommask.tab lfmask.vat value
+		  
+		  	&ty ----- Joinitem Majority Existing Vegetation Calls to Existing Vegetation Cover EVC Grid
+		  	joinitem %zone%_evcr.vat evc.tab %zone%_evcr.vat value 
+	   	    	
+	   	    	&ty ----- Copy Combo twice to make combo2 and combo3
+	   	    	copy combo combo2
+	   	    	copy combo combo3
+	   	    
+	   	    	&ty ----- Joining Combo and evtespsc.tab
+    	   	    	joinitem combo.vat evtespsc.tab combo.vat value
+	   	    
+	   	    	&ty ----- Joining Combo2 and evtsc.tab
+	   	    	joinitem combo2.VAT evtsc.tab combo2.vat value
+	   	    
+	   	    	&ty ----- Joining Combo3 and evt.tab
+	   	    	joinitem combo3.VAT evt.tab combo3.vat value
+	   
+	   	GRID
+ 	   	     	
+ 	   	     	&ty ----- Create grids using filling routine
+ 	   	     		fill1 = con(combo.flm > 0, combo.flm, combo2.flm)
+ 	   	     		fill2 = con(fill1 > 0, fill1, combo3.flm)
+ 	   	     		holefind = con(fill2 > 0, fill2, -9998)
+ 	   	     
+ 	   	     	&ty ----- You need to have created the dominate lifeform mask by this point aka: dommask
+ 	   	     		lfinhole = con(holefind eq -9998, lfmask.DomLfcode)
+ 	   	     	End
+ 	   	     	
+ 	   	     	&ty ----- Start "hole filling docell:  The -9997 indicates NLCD OR a problem"                                                                                                                               
+ 	   	     		DOCELL
+ 	   	     			IF(%zone%_evcr >= 100 and %zone%_evcr <= 105 and lfinhole == 1)CCmajority = 11
+					ELSE If (%zone%_evcr >= 106 and %zone%_evcr <= 109 and lfinhole == 1)CCmajority = 83
+ 	   	     			ELSE If (%zone%_evcr >= 111 and %zone%_evcr <= 115 and lfinhole == 1)CCmajority = 11
+	                                ELSE If (%zone%_evcr >= 116 and %zone%_evcr <= 129 and lfinhole == 1)CCmajority = 15  
+ 	   	     			ELSE If (%zone%_evcr >= 100 and %zone%_evcr <= 129 and lfinhole == 2)CCmajority = 15
+					ELSE If (%zone%_evcr >= 100 and %zone%_evcr <= 101 and lfinhole == 3)CCmajority = 11
+					ELSE If (%zone%_evcr >= 102 and %zone%_evcr <= 104 and lfinhole == 3)CCmajority = 15
+					ELSE If (%zone%_evcr >= 105 and %zone%_evcr <= 109 and lfinhole == 3)CCmajority = 21					
+					ELSE If (%zone%_evcr eq 111 and lfinhole == 3)CCmajority = 11				
+					ELSE If (%zone%_evcr eq 112 and lfinhole == 3)CCmajority = 14
+					ELSE If (%zone%_evcr >= 113 and %zone%_evcr <= 116 and lfinhole == 3)CCmajority = 11
+					ELSE If (%zone%_evcr >= 117 and %zone%_evcr <= 129 and lfinhole == 3)CCmajority = 15
+					ELSE If (%zone%_evcr >= 100 and %zone%_evcr <= 103 and lfinhole == 5)CCmajority = 11
+					ELSE If (%zone%_evcr >= 104 and %zone%_evcr <= 108 and lfinhole == 5)CCmajority = 31
+					ELSE If (%zone%_evcr eq 109 and lfinhole == 5)CCmajority = 64
+ 					ELSE If (%zone%_evcr >= 111 and %zone%_evcr <= 114 and lfinhole == 5)CCmajority = 14					
+					ELSE If (%zone%_evcr >= 115 and %zone%_evcr <= 123 and lfinhole == 5)CCmajority = 15
+					ELSE If (%zone%_evcr eq 124 and lfinhole == 5)CCmajority = 54
+					ELSE If (%zone%_evcr >= 125 and %zone%_evcr <= 129 and lfinhole == 5)CCmajority = 15
+ 	   	     			ELSE CCmajority = -9997
+ 	   	     			End
+ 	   	     			
+ 	   	     	&ty ----- Create a comprehensive Grid with holes filled called Almost_fin
+ 	   	     		comp1 = con(CCmajority < 0, fill2, CCmajority)
+ 	   	     
+ 	   	     	&ty ----- Create a new comprehensive Grid called Almost_fin2
+ 	   	     		comp2 = con(fill2 > 0, fill2, comp1)
+ 	   	     	
+ 	   	     	&ty ----- Bad Pixel Checker ----- If the FLM assignment is out of bounds for the lifeform, burn in an error code, then fix it with the FLM range data.
+ 	   	     		DOCELL
+ 	   	     			if(lfmask.Domlfcode eq 2 and comp2 > 64)%zone%_error = 100
+ 	   	     			else if(lfmask.Domlfcode eq 3 and comp2 > 66)%zone%_error = 200
+ 	   	     			else %zone%_error = -9996
+ 	   	     			end
+ 	   	     		DOCELL
+ 	   	     			if(%zone%_error eq 100)%zone%_grail = 15
+					else if(%zone%_error eq 200)%zone%_grail = 11
+ 	   	     			else %zone%_grail = -9995
+ 	   	     			end
+ 	   	     
+ 	   	     	&ty ----- Create a new comprehensive grid that incorporates the bad pixel fix
+ 	   	     		comp3 = con(%zone%_error < 0, comp2, %zone%_grail)
+	   	     
+	   	     	&ty ----- Create a Final FLM Grid by stamping in NLCD values
+	   	     		flm_fin = con(%zone%_evtr < 2000, %zone%_evtr + 10000, comp3)
+	   	     
+	   	     
+	   	     
+	   	     
+	   	     	&ty ----- test for Broccoli condition     /* Check for nodata pixels compared to mask 
+	   	     	
+	   	     	&ty ----- Mask grid is nodata where there is no majority value
+	   	     		broccoliFLM   = con(isnull(flm_fin), -9999, flm_fin)
+	   	     		%zone%_3kchk  = con(isnull(%zone%_3kgd), -9999, %zone%_3kgd)
+	   	     		BROCCOLI.tab = zonalstats(%zone%_3kchk, flm_fin,    #, data)
+	   	     	End
+	   	     	q
+			&ty ----- Joinitem Colorgun
+				rename broccoliFLM %zone%_flm
+				joinitem %zone%_flm.vat x.tab %zone%_flm.vat value
+				
+			

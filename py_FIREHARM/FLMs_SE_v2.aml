@@ -1,0 +1,149 @@
+&echo &off
+/* -----------------------------------------------------------------------------------------------
+/* FLM_Majority_Method.aml -- developed by:
+/* Jason M. Herynk
+/*
+/*------------------------Purpose-----------------------------------------------------------------
+/*This AML Produces a Fuel Loading Model GRID:
+/******************************************************
+/* Grids needed:z##_bps, z##_evt, z##_evc, z##_3kgd, z##_evh
+/* Tables needed: EVCCall.dbf, Dommask.dbf, evt.dbf, bpsevt.dbf, bpsevtevc.dbf, bspevtevcevh.dbf, x.tab
+/******************************************************
+
+&ty    ----Renaming Grids with Zone ##---- 
+ 	&echo &off 
+    	&setvar work_path := [response 'Enter workspace path i.e. E:\workspace... Path']
+    	&if [null %work_path%] &then
+    		&return &warning No path entered!!!!!
+	
+    	w %work_path%
+
+    	/* ----- Get Grid Zone Number from user -----
+    	&setvar zone := [response 'Enter zone number i.e. z##']
+    	&if [null %zone%] &then
+    		&return &warning No Zone Number entered!!!!!
+
+/*	&do zone &list 44 45 46 47 48 53 54 55 56 57 58 59 98 99
+	
+
+	&ty ----- copying GRIDs bps, 3kgd, evt, evc, and evh circa 2000 for refreash FLMs
+ 		
+ /* 	     	copy K:\fe\refreash\SE\z%zone%\work\z%zone%_bps
+ /* 	     	copy K:\fe\refreash\SE\z%zone%\base\z%zone%_3kgd 
+ /* 	     	copy K:\fe\refreash\SE\z%zone%\work\z%zone%_evt
+ /*		copy K:\fe\refreash\SE\z%zone%\work\z%zone%_evc
+ /*	     	copy K:\fe\refreash\SE\z%zone%\work\z%zone%_evh
+
+/* 	GRID
+/*				&ty ----- Start RECODE EVC values to percent breaks                                                                                                                               
+/*
+/* 	    	
+/* 	       	
+/* 	    	  	&ty ----- Create combo grid by combining bps/evt/evc/evh to be exported as a dbf to the FLM_Python_Outfiles_Grid_Combine.mdb
+/* 	     	  	z%zone%_combo = combine(z%zone%_bps, z%zone%_evt, z%zone%_evc, z%zone%_evh)
+/* 	     	  	End
+/* 	     	  	q
+/* 	     	  	&end
+/* 	     	  	&pause
+ /*	     	  
+ /*	   	  	
+ /*	   	  	&ty ----- Joining and defining majority FLM by EVT/EVC/EVH
+ /*	   	  	dbaseinfo z%zone%_four.dbf four_%zone%.tab define
+ /*	   	  		Value Value 10 10 i
+ /*	   	  		FLM FLM 10 10 i
+ /*	   	  	End
+ /*	   	  	
+ /*	   	  	&ty ----- Joining and defining majority FLM by EVT/EVC
+ /*	   	  	dbaseinfo z%zone%_three.dbf three_%zone%.tab define
+ /*	   	  		Value Value 10 10 i
+ /*	   	  		FLM FLM 10 10 i
+ /*	   	  	End
+ /*	   	  
+ /*	   	  	&ty ----- Joining and defining majority FLM by EVT/EVH
+ /*	   	  	dbaseinfo z%zone%_two.dbf two_%zone%.tab define
+ /*	   	  		Value Value 10 10 i
+ /*	   	  		FLM FLM 10 10 i
+ /*	   	  	End
+ /*			&ty ----- Joining and defining majority FLM by EVT
+ /*	   	  	dbaseinfo z%zone%_one.dbf one_%zone%.tab define
+ /*	   	  		Value Value 10 10 i
+ /*	   	  		FLM FLM 10 10 i
+ /*	   	  	End			
+ /*			&ty ----- Joining and defining majority FLM by EVTGROUPED
+ /*	   	  	dbaseinfo z%zone%_five.dbf five_%zone%.tab define
+ /*	   	  		Value Value 10 10 i
+ /*	   	  		FLM FLM 10 10 i
+ /* 		  	End
+ /*	   	    	
+ /*	   	    	&ty ----- Copy Combo thrice to make combo2 and combo3 and combo4
+ /*	   	    	copy z%zone%_combo z%zone%_combo2
+ /*	   	    	copy z%zone%_combo z%zone%_combo3
+ /*			copy z%zone%_combo z%zone%_combo4
+ /*	   	    	copy z%zone%_combo z%zone%_combo5
+ /*		q
+
+
+	   	    	&ty ----- Joining Combo and EVTEVCEVH.tab
+    	   	    	joinitem z%zone%_combo.vat four_%zone%.tab z%zone%_combo.vat value
+	   	    
+	   	    	&ty ----- Joining Combo2 and EVTGEVCEVH.tab
+	   	    	joinitem z%zone%_combo2.VAT three_%zone%.tab z%zone%_combo2.vat value
+	   	    
+	   	    	&ty ----- Joining Combo3 and EVT.tab
+	   	    	joinitem z%zone%_combo3.VAT two_%zone%.tab z%zone%_combo3.vat value
+	   
+			&ty ----- Joining Combo4 and EVC.tab
+	   	    	joinitem z%zone%_combo4.VAT one_%zone%.tab z%zone%_combo4.vat value
+
+			&ty ----- Joining Combo5 and BPS.tab
+ 	   	    	joinitem z%zone%_combo5.VAT five_%zone%.tab z%zone%_combo5.vat value
+
+
+	   	GRID
+ 	   	     	
+ 	   	     	&ty ----- Create grids using filling routine
+ 	   	     		z%zone%_fill1 = con(z%zone%_combo.flm > 0, z%zone%_combo.flm, z%zone%_combo2.flm)
+ 	   	     		z%zone%_fill2 = con(z%zone%_fill1 > 0, z%zone%_fill1, z%zone%_combo3.flm)
+				z%zone%_fill3 = con(z%zone%_fill2 > 0, z%zone%_fill2, z%zone%_combo4.flm)
+				z%zone%_fill4 = con(z%zone%_fill3 > 0, z%zone%_fill3, z%zone%_combo5.flm)
+ 	   	     		z%zone%_holefind = con(z%zone%_fill4 > 0, z%zone%_fill4, -9999)
+			
+
+				&ty ----- Start RECODE NLCD TO 900 CODE"                                                                                                                               
+ 	   	     		DOCELL
+ 	   	     			IF(z%zone%_evc eq 11)z%zone%_flm = 911
+					ELSE IF(z%zone%_evc eq 12)z%zone%_flm = 912
+					ELSE IF(z%zone%_evc eq 20)z%zone%_flm = 920
+					ELSE IF(z%zone%_evc eq 21)z%zone%_flm = 921
+					ELSE IF(z%zone%_evc eq 22)z%zone%_flm = 922
+					ELSE IF(z%zone%_evc eq 23)z%zone%_flm = 923
+					ELSE IF(z%zone%_evc eq 24)z%zone%_flm = 924
+					ELSE IF(z%zone%_evc eq 31)z%zone%_flm = 931
+					ELSE IF(z%zone%_evc eq 32)z%zone%_flm = 932
+					ELSE IF(z%zone%_evc eq 80)z%zone%_flm = 980
+					ELSE IF(z%zone%_evc eq 81)z%zone%_flm = 981
+					ELSE IF(z%zone%_evc eq 82)z%zone%_flm = 982
+					ELSE IF(z%zone%_evc eq 83)z%zone%_flm = 983
+					ELSE IF(z%zone%_evc eq 84)z%zone%_flm = 984
+					ELSE IF(z%zone%_evc eq 85)z%zone%_flm = 985
+					ELSE z%zone%_flm = z%zone%_holefind
+					End
+					q
+
+				joinitem z%zone%_flm.vat flm.tab z%zone%_flm.vat value
+
+
+
+					
+				
+			
+
+
+
+
+
+
+
+
+
+

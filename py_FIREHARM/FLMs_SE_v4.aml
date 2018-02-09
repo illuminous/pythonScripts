@@ -1,0 +1,182 @@
+&echo &off
+/* -----------------------------------------------------------------------------------------------
+/* FLM_Majority_Method.aml -- developed by:
+/* Jason M. Herynk
+/*
+/*------------------------Purpose-----------------------------------------------------------------
+/*This AML Produces a Fuel Loading Model GRID:
+/******************************************************
+/* Grids needed:z##_bps, z##_evt, z##_evc, z##_3kgd, z##_evh
+/* Tables needed: EVCCall.dbf, Dommask.dbf, evt.dbf, bpsevt.dbf, bpsevtevc.dbf, bspevtevcevh.dbf, x.tab
+/******************************************************
+
+/*&ty    ----Renaming Grids with Zone ##---- 
+/* 	&echo &off 
+/*    	&setvar work_path := [response 'Enter workspace path i.e. E:\workspace... Path']
+/*    	&if [null %work_path%] &then
+/*    		&return &warning No path entered!!!!!
+	
+ /*   	w %work_path	
+
+    	/* ----- Get Grid Zone Number from user -----
+/*    	&setvar zone := [response 'Enter zone number i.e. z##']
+/*    	&if [null %zone%] &then
+/*    		&return &warning No Zone Number entered!!!!!
+
+
+&call flmcreate
+
+	
+
+
+/*******************************************************************************************************
+   	&ty ----- Changed EVTs 2550, 2551, 2552, 2553 that were split out from 2535 Plantation Group EVT back to 2535
+   	&ty ----- Using the outfile grid combine database
+/*******************************************************************************************************
+&routine flmcreate
+
+&do zone &list  42 
+
+&sv workdir = c:\tmp\z%zone%
+
+w %workdir%
+
+				
+		GRID
+ 			&ty ----- You should have exported the combo.dbf into the db for EVT editing if you needed to change the 
+			&ty ----- Plantation EVT     	  
+ 	       		  
+
+ 			&ty ----- Joining Combo and EVTEVCEVH.tab	
+ 			 
+ 	   	  	&ty ----- Joining and defining majority FLM by EVT/EVC/EVH
+ 	   	  	dbaseinfo four.dbf four_%zone%.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 	   	  	
+ 	   	  	&ty ----- Joining and defining majority FLM by EVT/EVC
+ 	   	  	dbaseinfo three.dbf three_%zone%.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 	   	  
+ 	   	  	&ty ----- Joining and defining majority FLM by EVT/EVH
+ 	   	  	dbaseinfo two.dbf two_%zone%.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End
+ 			&ty ----- Joining and defining majority FLM by EVT
+ 	   	  	dbaseinfo one.dbf one_%zone%.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+ 	   	  	End			
+ 			&ty ----- Joining and defining majority FLM by EVTGROUPED
+ 	   	  	dbaseinfo five.dbf five_%zone%.tab define
+ 	   	  		Value Value 10 10 i
+ 	   	  		FLM FLM 10 10 i
+  		  	End
+ 	   	    	
+ 	   	    	&ty ----- Copy Combo thrice to make combo2 and combo3 and combo4
+ 	   	    	copy z%zone%_combo z%zone%_combo1
+ 			copy z%zone%_combo z%zone%_combo2
+ 	   	    	copy z%zone%_combo z%zone%_combo3							 
+ 			copy z%zone%_combo z%zone%_combo4
+ 	   	    	copy z%zone%_combo z%zone%_combo5
+ 		
+ 	 q
+     	   	    	joinitem z%zone%_combo1.vat four_%zone%.tab z%zone%_combo1.vat value
+ 	   	    
+ 	   	    	&ty ----- Joining Combo2 and EVTGEVCEVH.tab
+ 	   	    	joinitem z%zone%_combo2.VAT three_%zone%.tab z%zone%_combo2.vat value
+ 	   	    
+ 	   	    	&ty ----- Joining Combo3 and EVT.tab
+ 	   	    	joinitem z%zone%_combo3.VAT two_%zone%.tab z%zone%_combo3.vat value
+ 	   
+ 			&ty ----- Joining Combo4 and EVC.tab
+ 	   	    	joinitem z%zone%_combo4.VAT one_%zone%.tab z%zone%_combo4.vat value
+ 
+ 			&ty ----- Joining Combo5 and BPS.tab
+ 	   	    	joinitem z%zone%_combo5.VAT five_%zone%.tab z%zone%_combo5.vat value
+
+
+	   GRID
+ 	   	     	
+ 	   	     	&ty ----- Create grids using filling routine
+ 	   	     		z%zone%_fill1 = con(z%zone%_combo1.flm > 0, z%zone%_combo1.flm, z%zone%_combo2.flm)
+ 	   	     		z%zone%_fill2 = con(z%zone%_fill1 > 0, z%zone%_fill1, z%zone%_combo3.flm)
+				z%zone%_fill3 = con(z%zone%_fill2 > 0, z%zone%_fill2, z%zone%_combo4.flm)
+				z%zone%_fill4 = con(z%zone%_fill3 > 0, z%zone%_fill3, z%zone%_combo5.flm)
+ 	   	     		z%zone%_holefind = con(z%zone%_fill4 > 0, z%zone%_fill4, -9999)
+			
+
+				&ty ----- Start RECODE NLCD TO 900 CODE"                                                                                                                               
+ 	   	     		
+					
+			
+			
+ 				DOCELL
+ 	   	     			IF(z%zone%_combo.z%zone%_evc eq 11)z%zone%_flma = 911
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 12)z%zone%_flma = 912
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 20)z%zone%_flma = 920
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 21)z%zone%_flma = 921
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 22)z%zone%_flma = 922
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 23)z%zone%_flma = 923
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 24)z%zone%_flma = 924
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 31)z%zone%_flma = 931
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 32)z%zone%_flma = 932
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 80)z%zone%_flma = 980
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 81)z%zone%_flma = 981
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 82)z%zone%_flma = 982
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 83)z%zone%_flma = 983
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 84)z%zone%_flma = 984
+ 					ELSE IF(z%zone%_combo.z%zone%_evc eq 85)z%zone%_flma = 985
+ 					ELSE z%zone%_flma = z%zone%_holefind
+ 					End
+ 					
+				 DOCELL
+					IF(z%zone%_combo.z%zone%_evc > 0 and z%zone%_combo.z%zone%_evc <= 40)z%zone%_flmb = 11
+					ELSE IF(z%zone%_combo.z%zone%_evc > 40 and z%zone%_combo.z%zone%_evc <= 70)z%zone%_flmb = 21
+					ELSE IF(z%zone%_combo.z%zone%_evc > 70)z%zone%_flmb = 31
+					ELSE z%zone%_flmb = -9998
+					End
+					
+
+				z%zone%_flmc = con(z%zone%_flma eq -9999, z%zone%_flmb, z%zone%_flma)
+				z%zone%_flm = con(z%zone%_3kgd eq 1, z%zone%_flmc)
+
+			
+			&ty ----- Kill ancilliary grids
+			
+/* 				kill z%zone%_flmc
+/*				kill z%zone%_flmb
+/* 				kill z%zone%_holefind
+/* 				kill z%zone%_flma
+/* 				kill z%zone%_fill4
+/* 				kill z%zone%_fill3
+/* 				kill z%zone%_fill2
+/* 				kill z%zone%_fill1
+/* 				kill z%zone%_combo5
+/* 				kill z%zone%_combo4
+/* 				kill z%zone%_combo3
+/* 				kill z%zone%_combo2
+/* 				kill z%zone%_combo1
+/*				q
+ 
+				joinitem z%zone%_flm.vat flm.tab z%zone%_flm.vat value
+				
+&end
+&return
+			  				
+				
+			
+
+
+
+
+
+
+
+
+
+
