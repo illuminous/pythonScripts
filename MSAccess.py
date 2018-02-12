@@ -51,7 +51,7 @@ import win32com.client
 #PYTHON with folder python is in).  Tools>COM Makepy utility - select 
 #library named Microsoft ActiveX Data Objects 2.8 Library (2.8) and 
 #select OK. Microsoft ActiveX Data Objects Recordset 2.8 Library (2.8)
-data_source = "c:/temp/flm_python_outfiles_grid_combine.mdb"
+data_source = "G:/Working/Treelists_2012_update/PNW/data_analysis.Copy of PNW.accdb"
 user = ''
 pwd = ''
 mdw = ''
