@@ -34,8 +34,7 @@ directories = []
 combos = []
 zoneres = []
 mergedres = []
-zones = ['z16']
-clipgrid = ['z16_id']
+zones = ['z38']
 products = ['siter', 'evtr', 'nfdrr', 'fbfmr', 'flmr', 'demr', 'aspr', 'slpr',
             'latr', 'lonr', 'lair', 'sdepr', 'sandr', 'siltr', 'clayr', 'rshdr', 'dbhr',
           'bcfr', 'lcrr', 'chr', 'cbdr', 'trlstr']
@@ -296,12 +295,12 @@ def cleanOutfile(root):
 """Create a reference asci grid that you can joinitem on later"""
 def createReference(root):
     res10 = []
-    outputmerged = open(root + '/' + 'evtrBig.txt', 'r')
-    combo = open(root + '/' + 'cleanFiles/' + 'combo.asc', 'w')
-    combo.write("""ncols         5412
-nrows         5795
-xllcorner     -1613835
-yllcorner     1110475
+    outputmerged = open(root + '/' + 'evtr.txt', 'r')
+    combo = open(root + '/' + 'cleanFiles/' + 'comboevt.asc', 'w')
+    combo.write("""ncols         4899
+nrows         7249
+xllcorner     -399375
+yllcorner     1487075
 cellsize      100
 NODATA_value  -9999
 """)
@@ -311,7 +310,10 @@ NODATA_value  -9999
         firstitem = str(item).split()
         for blow in firstitem:
             x+=1
-            combo.write(str(x) + ' ')
+            if blow == '-9999':
+                combo.write('-9999'+ ' ')
+            else:
+                combo.write(str(x) + ' ')
         combo.write('\n')
     combo.close()    
 
@@ -319,16 +321,17 @@ NODATA_value  -9999
 ############################################################
 """Main: Commands to Run"""
                      
-buildDirectories(16,17)
-genAscii()
-createFolders('J:/event_prep/z16')
-transposeAscii('J:/event_prep/z16')
-delHeader('J:/event_prep/z16', 11) 
-timesFixer('J:/event_prep/z16')
-mergeFiles('J:/event_prep/z16')
-cleanOutfile('J:/event_prep/z16')
-createReference('J:/event_prep/z16') 
+buildDirectories(38,39)
+##genAscii()
+##createFolders('L:/event_prep/z23')
+##transposeAscii('L:/event_prep/z23')
+##delHeader('L:/event_prep/z23', 11) 
+##timesFixer('L:/event_prep/z23')
+##mergeFiles('L:/event_prep/z23')
+##cleanOutfile('L:/event_prep/z23')
+createReference('J:/event_prep/z38') # dont forget to delete header 
 
 toc = time.clock()
 processingtime = toc-tic
 print processingtime
+print 'seconds'

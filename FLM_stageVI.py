@@ -43,6 +43,7 @@ def csvToDbase():
             if os.path.isfile(csvfileloc) == True:
                 try:             
                     print 'Converting csv files'
+                    gp.OverWriteOutput = 1
                     gp.TableToDbase_conversion(csvfileloc, d)
                 except:
                     # If an error occurred print the message to the screen
