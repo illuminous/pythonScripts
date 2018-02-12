@@ -22,30 +22,24 @@ gp = arcgisscripting.create()
 gp.toolbox="management"
 
 # Set location of LANDFIRE data.  These need to be changed/checked with every run.
-workspace = 'L:/daymet_prep'
-lukup = 'L:/LookupTables'
+workspace = 'F:/event_prep'
 source1 = 'k:/lib/landfire/national'
-#zones = ['z14','z15', 'z16', 'z17','z23','z24', 'z25', 'z27','z28','z31',
-         #'z38', 'z39', 'z40','z43']
+zones = ['z14','z15', 'z16', 'z17','z23','z24', 'z25', 'z27','z28','z31',
+         'z38', 'z39', 'z40','z43']
 ##zones = ['z36','z37', 'z44', 'z41','z50','z51', 'z56', 'z55','z98','z99', 'z46', 'z45','z48','z54', 'z58', 'z59'
-##         ,'z57','z53', 'z47', 'z52','z62','z61', 'z60', 'z63','z64','z65', 'z66'] # removed 33, 32, 34, 35, 26 because of missing treelist
-
-zones = ['z42']
-############################################################         
+##         ,'z57','z53', 'z47', 'z52','z62','z61', 'z60', 'z63','z64','z65', 'z66'] # removed 33 because of missing treelist
 cellsize = '1000'
-##############################
-##############################
+
 # These are lists of grids used in processing below
 
 bio = ['sand', 'silt', 'mxdepth', 'clay']
 bases = ['0kgd']
-fin_dels = ['asp','slp','bps', 'cbd', 'cbh', 'cc', 'ch', 'dem', 'evt']#add back flm
+fin_dels = ['asp','slp','bps', 'cbd', 'cbh', 'cc', 'ch', 'dem', 'evt','flm']
 fuels = ['fbfm40']
 treelists = ['tlg']
-flms = ['flm']
 zipped = ['Grass', 'Trees']
-nearest = ['sand', 'silt', 'mxdepth', 'clay','bps', 'cbd', 'cbh', 'cc', 'ch', 'evt', 'fbfm40', 'dem', 'slp', 'asp','tlg', 'flm', '0kgd'] # dont foget these , 'tlg', 'flm', , '0kgd'
-clips = ['sand', 'silt', 'mxdepth', 'clay', 'bps', 'cbd', 'cbh', 'cc', 'ch', 'evt', 'fbfm40', 'dem', 'slp', 'asp', 'tlg', 'flm', '0kgd']#dont forget to put these back in tlg and flm
+nearest = ['sand', 'silt', 'mxdepth', 'clay','bps', 'cbd', 'cbh', 'cc', 'ch', 'evt', 'fbfm40', 'dem', 'slp', 'asp', '0kgd', 'tlg', 'flm']
+clips = ['sand', 'silt', 'mxdepth', 'clay', 'flm', 'bps', 'cbd', 'cbh', 'cc', 'ch', 'evt', 'fbfm40', 'dem', 'slp', 'asp', 'tlg']
 ##bilinear = ['dem', 'slp', 'asp', '3kgd']
 image = ['laif']#, 'laig']
 
@@ -55,10 +49,8 @@ def copyBio():
     for zone in zones:
         for b in bio:
             print 'Copying %s_%s' %(zone, b)
-            copyfrom = source1 + '/%s/%s_bio/gis/%s_%s' %(zone, zone, zone, b)
-            print copyfrom
+            copyfrom = source1 + '/%s/%s_bio/gis/%s_%s' %(zone, zone, zone, b)    
             copyto = workspace +'/%s/%s_%s' %(zone, zone, b)
-            print copyto
 
             if gp.exists(copyto):
                 print '%s_%s Already exists' %(zone, b)
@@ -108,24 +100,11 @@ def copyTLG():
     for zone in zones:
         for tree in treelists:
             print 'Copying %s_%s' %(zone, tree)
-            copyfrom = 'G:/Working/Treelists/treelists/treelist_archive/%s/%s_%s' %(zone, zone, tree)    
+            copyfrom = 'k:/fe/fmi/fedat8/TLG/%s_%s' %(zone, tree)    
             copyto = workspace + '/%s/%s_%s' %(zone, zone, tree)
 
             if gp.exists(copyto):
                 print '%s_%s Already exists' %(zone, tree)
-            else:
-                gp.CopyRaster_management(copyfrom, copyto)
-
-def copyFLM():
-    """Copy FLM"""
-    for zone in zones:
-        for flm in flms:
-            print 'Copying %s_%s' %(zone, flm)
-            copyfrom = 'L:/LF_national/FLMs/%s/%s_%s' %(zone, zone, flm)    
-            copyto = workspace + '/%s/%s_%s' %(zone, zone, flm)
-
-            if gp.exists(copyto):
-                print '%s_%s Already exists' %(zone, flm)
             else:
                 gp.CopyRaster_management(copyfrom, copyto)
 
@@ -193,18 +172,19 @@ def resampleGrids():
     """Resample first to 100 then to 1000 meters based on user input NEAREST"""
     for zone in zones:
         for near in nearest:
-            print 'Preparing to resample grid using nearest method %s_%s' %(zone, near)
-            cellsize100 = '100' ##raw_input('Enter Resample Size:')
-            cellsize1000 = '1000'
-            method = 'NEAREST' ##raw_input('Enter Resampling algorithm to be used when resampling the raster NEAREST, BILINEAR, CUBIC, SEARCH:')
-            grid = workspace + '/%s/%s_%s_p' %(zone, zone, near)
-            resampled = workspace + '/%s/%s%sr1' %(zone, zone, near)
-            resampled2 = workspace + '/%s/%sr' %(zone, near)
-            if gp.exists(resampled2):
-                print '%s_%s Already has been resampled' %(zone, near)
-            else:
-                gp.Resample_management(grid, resampled, cellsize100, method)
-                gp.Resample_management(resampled, resampled2, cellsize1000, method)
+            for t in treelists:
+                print 'Preparing to resample grid using nearest method %s_%s' %(zone, near)
+                cellsize100 = '100' ##raw_input('Enter Resample Size:')
+                cellsize1000 = '1000'
+                method = 'NEAREST' ##raw_input('Enter Resampling algorithm to be used when resampling the raster NEAREST, BILINEAR, CUBIC, SEARCH:')
+                grid = workspace + '/%s/%s_%s_p' %(zone, zone, near)
+                resampled = workspace + '/%s/%s%sr1' %(zone, zone, near)
+                resampled2 = workspace + '/%s/%sr' %(zone, near)
+                if gp.exists(resampled2):
+                    print '%s_%s Already has been resampled' %(zone, near)
+                else:
+                    gp.Resample_management(grid, resampled, cellsize100, method)
+                    gp.Resample_management(resampled, resampled2, cellsize1000, method)
 
 def resampleImage():
     """Resample either 100 or 1000 meters based on user input Image"""
@@ -215,8 +195,8 @@ def resampleImage():
             cellsize1000 = '1000'
             ##raw_input('Enter Resample Size:')
             method = 'NEAREST' ##raw_input('Enter Resampling algorithm to be used when resampling the raster NEAREST, BILINEAR, CUBIC, SEARCH:')
-            grid = workspace +'/%s/%sf_av_mxlaii.img' %(zone, zone)
-            resampled = workspace +'/%s/%sr1.img' %(zone,  i)
+            grid = workspace +'/%s/%s_%s.img' %(zone, zone, i)
+            resampled = workspace +'/%s/%s%sr.img' %(zone, zone, i)
             resampled2 = workspace + '/%s/%sr.img' %(zone, i)
 
             if gp.exists(resampled):
@@ -250,7 +230,6 @@ def latlongShp():
             lat_r = workspace + '/%s/latr' %(zone)
             lon_r = workspace + '/%s/lonr' %(zone)
             # Process: PointToRaster
-            gp.OverWriteOutput = 1 #overide existing
             gp.PointToRaster_conversion(latlon2, "POINT_Y", lat_p1, "MOST_FREQUENT", "NONE", cellsize) #make sure you change this 1000 to 100 meters
             gp.PointToRaster_conversion(latlon2, "POINT_X", lon_p1, "MOST_FREQUENT", "NONE", cellsize)
             gp.CheckOutExtension("3d")
@@ -269,7 +248,7 @@ def createGrids():
     for zone in zones:
         
         # Set the input files
-        
+        lukup = workspace +'/%s/LookupTables' %(zone) #global
         #rename fbfm40 and mxdepth
         oldfbfm40 = workspace + '/%s/fbfm40r' %(zone)
         newfbfm40 = workspace + '/%s/fbfmr' %(zone)
@@ -292,7 +271,7 @@ def createGrids():
         ch_r = workspace +'/%s/chr' %(zone)
         evt_r = workspace +'/%s/evtr' %(zone)
         tlg_r = workspace +'/%s/tlgr' %(zone)
-        kgd_r = workspace +'/%s/0kgdr' %(zone)
+        kgd_r = workspace +'/%s/%s0kgdr' %(zone, zone)
         bps_r = workspace +'/%s/bpsr' %(zone)
         # Grids to create p for prep
         nfdr_p = workspace +'/%s/%s_nfdr_p' %(zone, zone)
@@ -434,15 +413,13 @@ def deleteGrids():
 ##copyBio()            
 ##copyBases()
 ##copyFinDels()
-####need to move flms and tlgs around and clip and resample them
-##copyFB40() 
+##copyFB40()
 ##copyTLG()
-copyFLM()
-copyLAI()
-clipGrids()
-resampleGrids()
+##copyLAI()
+##clipGrids()
+##resampleGrids()
 ##resampleImage()
 ##latlongShp()
-##createGrids()
+createGrids()
 ##createLAI()
 ##deleteGrids()
